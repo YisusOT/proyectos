@@ -31,11 +31,35 @@ Nuestro proyecto se trato de armar un carrito a control remoto con la base de ES
 El ESP-32 es un microcontrolador de sistema en chip (SoC) de bajo costo y bajo consumo.
 Se conecta inalambricamente facilitando su conexion en red, y en otros dispositivos inteligentes.
 
-#### Aplicaciones
+#### ¿que es el codigo MAC y para que sirve?
+- Es un identificador único que viene asignado a cada dispositivo con red
+- indetificacion de dispositivos en la red
+- enviar datos a otros dispositivos o equipo específicos
+- direct communication (como un ESP32 a ESP32)
+- ¿Por qué es necesario?
+El protocolo ESP-NOW no usa nombres de red; usa direcciones MAC directas. El Transmisor (el control) necesita esta MAC para saber exactamente a qué dispositivo debe enviar los comandos. Es como obtener el número de teléfono exacto de la persona a la que quieres llamar.
+​Lo más importante:
+El código te da la dirección en tres formatos. Tienes que tomar el formato de MicroPython (ej. receiver_mac = b'\xAC\x15...') y pegarlo en el Código 2.Transmisor (El Mando de Control)
+​¿Qué hace?
+Este es el software que convierte los movimientos de tu joystick en instrucciones de movimiento y las envía por el aire al carro.
+Sección del Código Función para el Carro RC
+receiver_mac = ... Le dice al control: "Quiero hablar con ESTE carro en específico".
+Activación de ESP-NOW Prepara la radio del ESP32 para hablar en modo directo, sin necesidad de conectarse a un router Wi-Fi.
+Lectura del Joystick (ADC) Lee los ejes X y Y del joystick. La clave es el ajuste de atenuación (ADC.ATTN_11DB) que asegura que se lean todos los movimientos del joystick.
+map_value() Procesa la intención. Convierte la lectura cruda (0 a 65535) en un valor de control simple y fácil de usar, generalmente de -1000 a 1000 (donde -1000 es toda la potencia hacia atrás y 1000 es toda la potencia hacia adelante/girar).
+struct.pack('<hh', val_x, val_y) Empaqueta la orden. Agarra los dos valores de control (-1000 a 1000) y los comprime en un paquete binario de solo 4 bytes. Esto garantiza que la comunicación sea rapidísima y la latencia baja.
+e.send() Envía ese paquete corto de datos al carro cada 50 milisegundos.
+En resumen: El Código 2 toma tu control, lo digitaliza, lo comprime y lo grita al Código 3:Receptor (El Cerebro del Carro)
+​¿Qué hace?
+Este es el software que vive dentro del carro. Recibe la orden del mando y la traduce en la velocidad y dirección adecuadas para cada motor.Sección del Código Función para el Carro RC
+Configuración de Pines Configura los 4 pines de dirección y los 2 pines de velocidad (PWM) que se conectan al driver de motores (Puente H).
+Activación de ESP-NOW Enciende la radio y se pone en modo escucha, esperando órdenes de su "peer" (el mando).
+e.recv() y struct.unpack() Escucha y Desempaca. Espera que llegue un paquete, lo abre y recupera los dos valores de control originales (X y Y, de -1000 a 1000).
+drive_motors(x, y) La Lógica de Manejo (Tank Drive Mixing): Esta es la sección más importante. Utiliza un algoritmo para calcular qué tan rápido y en qué dirección debe ir la rueda izquierda y la rueda derecha, basándose en la palanca X y Y.
+set_motor() Physical Control. It takes the final value of each motor and does two things: 1) If the value is positive or negative, it activates the correct steering pins (forward/backward). 2) It uses the magnitude of the value to set the duty cycle of the PWM (the power) going to the motor.
 
-- Sistemas de domotica y automatizacion del hogar
-- Dispositivos portatiles y wearables
-- Para crear carros chidos
+En resumen: El Código 3 escucha el paquete, calcula las velocidades para girar y moverse, y luego le manda esa electricidad a los motores para que el carro se mueva.
+
 
 -----
 ## Materiales que utilizamos
@@ -373,19 +397,16 @@ while True:
 -----
 
 ## Resultados
-El proyecto fue un exito, cumplio con nuestras expectativas, al momento de mover el Joistick el carro reaccionaba y se movia a la direccion que dirigia la palanca.
+El proyecto fue un exito, cumplio con nuestras expectativas, al momento de mover el Joystick el carro reaccionaba y se movia a la direccion que dirigia la palanca.
 
 Su funcionammiento se basa en que cuando se mueve dos palanquitas que alteran el eje X y Y al momento de mover el Joisitck esas palanquitas envian una señal al carro el cual interpreta esos dos ejes en una potencia de voltaje a los respectivos motores permitiendo asi su movimiento.
 
 -----
 
 ## Contratiempos y observaciones:
-
-- Teniamos el codigo ya hecho, pero estaba en lenguaje arduino, asi que tuvimos que pasarlo el codigo a lenguaje Python.
-
 - Vimos que la conexion en paralelo consumia mucha energia y cuando lo pasamos a conexion en serie, consumia menos.
 
-- Descargamos mal Micropython por culpa de Charly.
+- Descargamos mal Micropython por culpa no poner atencion a la momento de explicacion de la instalacion.
 
 -----
 
@@ -393,5 +414,5 @@ Su funcionammiento se basa en que cuando se mueve dos palanquitas que alteran el
 
 Para concluir con nuestro reporte, aprendimos como funcionan los carritos a control remoto además de como se comportan cada motor y para que circunstancias podremos combinarlas para crear algo nuevo, fue una buena manera de introducción al software de micro python, y podremos seguir utilizando este software para futuros proyectos.
 
-Además, aprendí a usar esp32,
+Además, aprendí a usar ESP32,
 Subir el repositorio a github, también aprendí sobre el desafío que representa diseñar un buen diseño práctico y funcional para el carro, debido a que no puede ser demasiado detallado sin ocupar peso innecesario que podría perjudicar a los motores.
